@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video Compress</title>
+<style>
+  :root{
+    --bg:#0d0f12;
+    --panel:#16191d;
+    --line:#262a30;
+    --text:#e8eaed;
+    --sub:#8a9099;
+    --accent:#ffb020;
+    --ok:#3ddc84;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .wrap{width:100%; max-width:420px;}
+
+  .drop{
+    border:1.5px dashed var(--line);
+    border-radius:18px;
+    background:var(--panel);
+    aspect-ratio:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+  }
+  .drop:active{background:#1b1f24;}
+  .drop svg{width:56px;height:56px;color:var(--sub);}
+  input[type=file]{display:none;}
+
+  .panel{display:none; width:100%;}
+  .panel.show{display:block;}
+
+  video{
+    width:100%;
+    border-radius:16px;
+    border:1px solid var(--line);
+    background:#000;
+    margin-bottom:18px;
+    max-height:50vh;
+  }
+
+  .row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:14px 16px;
+    margin-bottom:10px;
+  }
+  .row svg{width:20px;height:20px;color:var(--sub); flex-shrink:0;}
+  .row .label{flex:1; margin-left:12px; font-size:13.5px; color:var(--sub);}
+
+  select{
+    background:transparent;
+    color:var(--text);
+    border:none;
+    font-size:14px;
+    font-weight:600;
+    text-align:right;
+    -webkit-appearance:none;
+    appearance:none;
+    padding-right:4px;
+  }
+  select:focus{outline:none;}
+  option{background:var(--panel); color:var(--text);}
+
+  .go{
+    width:100%;
+    margin-top:8px;
+    padding:16px;
+    border:none;
+    border-radius:14px;
+    background:var(--accent);
+    color:#1a1300;
+    font-size:15px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    cursor:pointer;
+  }
+  .go:active{transform:scale(0.98);}
+  .go svg{width:20px;height:20px;}
+  .go:disabled{opacity:.5;}
+
+  .progress-wrap{display:none; margin-top:16px;}
+  .progress-wrap.show{display:block;}
+  .bar-track{
+    width:100%;
+    height:6px;
+    background:var(--line);
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .bar-fill{
+    height:100%;
+    width:0%;
+    background:var(--accent);
+    border-radius:3px;
+    transition:width .2s ease;
+  }
+  .progress-label{
+    text-align:center;
+    font-size:12px;
+    color:var(--sub);
+    margin-top:8px;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .done-wrap{display:none; text-align:center; margin-top:18px;}
+  .done-wrap.show{display:flex; flex-direction:column; align-items:center;}
+  .size-compare{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:var(--sub);
+    font-size:13px;
+    margin-bottom:16px;
+    font-variant-numeric:tabular-nums;
+  }
+  .size-compare b{color:var(--ok); font-size:15px;}
+  .size-compare svg{width:16px;height:16px;}
+
+  .btn-row{display:flex; gap:12px; width:100%;}
+  .btn{
+    flex:1;
+    aspect-ratio:1;
+    border-radius:16px;
+    border:1px solid var(--line);
+    background:var(--panel);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    color:var(--text);
+  }
+  .btn:active{transform:scale(0.94);}
+  .btn svg{width:24px;height:24px;}
+  .btn-primary{background:var(--accent); border-color:var(--accent); color:#1a1300;}
+
+  .again{
+    margin-top:18px;
+    width:40px;height:40px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:var(--panel);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    color:var(--sub);
+  }
+  .again svg{width:18px;height:18px;}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <label class="drop" id="dropZone">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+      <polygon points="23 7 16 12 23 17 23 7"/>
+      <rect x="1" y="5" width="15" height="14" rx="2"/>
+    </svg>
+    <input type="file" id="fileInput" accept="video/*">
+  </label>
+
+  <div class="panel" id="panel">
+    <video id="preview" controls></video>
+
+    <div class="row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      <span class="label">Resolution</span>
+      <select id="resSelect">
+        <option value="1080">1080p</option>
+        <option value="720" selected>720p</option>
+        <option value="480">480p</option>
+        <option value="360">360p</option>
+        <option value="240">240p</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="label">Quality</span>
+      <select id="qualitySelect">
+        <option value="18">High</option>
+        <option value="23" selected>Medium</option>
+        <option value="28">Low</option>
+        <option value="32">Lowest</option>
+      </select>
+    </div>
+
+    <button class="go" id="goBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Compress
+    </button>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+      <div class="progress-label" id="progressLabel">0%</div>
+    </div>
+
+    <div class="done-wrap" id="doneWrap">
+      <div class="size-compare">
+        <span id="origSize">—</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <b id="newSize">—</b>
+      </div>
+      <div class="btn-row">
+        <div class="btn btn-primary" id="downloadBtn" title="Download">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="btn" id="shareBtn" title="Share">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="again" id="againBtn" title="New">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 01-9 9 9.75 9.75 0 01-6.74-2.74L3 16m0 5v-5h5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const panel = document.getElementById('panel');
+const preview = document.getElementById('preview');
+const resSelect = document.getElementById('resSelect');
+const qualitySelect = document.getElementById('qualitySelect');
+const goBtn = document.getElementById('goBtn');
+const progressWrap = document.getElementById('progressWrap');
+const barFill = document.getElementById('barFill');
+const progressLabel = document.getElementById('progressLabel');
+const doneWrap = document.getElementById('doneWrap');
+const origSizeEl = document.getElementById('origSize');
+const newSizeEl = document.getElementById('newSize');
+const downloadBtn = document.getElementById('downloadBtn');
+const shareBtn = document.getElementById('shareBtn');
+const againBtn = document.getElementById('againBtn');
+
+let inputFile = null;
+let outputBlob = null;
+let outputUrl = null;
+let ffmpeg = null;
+
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files && e.target.files[0]) {
+    inputFile = e.target.files[0];
+    dropZone.style.display = 'none';
+    panel.classList.add('show');
+    preview.src = URL.createObjectURL(inputFile);
+    doneWrap.classList.remove('show');
+    progressWrap.classList.remove('show');
+    goBtn.style.display = 'flex';
+  }
+});
+
+function fmtSize(bytes) {
+  if (bytes >= 1024*1024) return (bytes/1024/1024).toFixed(1) + 'MB';
+  return Math.round(bytes/1024) + 'KB';
+}
+
+goBtn.addEventListener('click', async () => {
+  if (!inputFile) return;
+
+  goBtn.disabled = true;
+  goBtn.style.display = 'none';
+  progressWrap.classList.add('show');
+  barFill.style.width = '0%';
+  progressLabel.textContent = 'Loading…';
+
+  try {
+    if (!ffmpeg) {
+      const { createFFmpeg, fetchFile } = FFmpeg;
+      ffmpeg = createFFmpeg({
+        log: false,
+        progress: ({ ratio }) => {
+          if (ratio >= 0 && ratio <= 1) {
+            const pct = Math.round(ratio * 100);
+            barFill.style.width = pct + '%';
+            progressLabel.textContent = pct + '%';
+          }
+        }
+      });
+      await ffmpeg.load();
+    }
+
+    const { fetchFile } = FFmpeg;
+    const inName = 'input_' + Date.now();
+    const outName = 'output_' + Date.now() + '.mp4';
+
+    ffmpeg.FS('writeFile', inName, await fetchFile(inputFile));
+
+    const height = resSelect.value;
+    const crf = qualitySelect.value;
+
+    await ffmpeg.run(
+      '-i', inName,
+      '-vf', `scale=-2:${height}`,
+      '-c:v', 'libx264',
+      '-crf', crf,
+      '-preset', 'fast',
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      outName
+    );
+
+    const data = ffmpeg.FS('readFile', outName);
+    outputBlob = new Blob([data.buffer], { type: 'video/mp4' });
+    outputUrl = URL.createObjectURL(outputBlob);
+
+    ffmpeg.FS('unlink', inName);
+    ffmpeg.FS('unlink', outName);
+
+    origSizeEl.textContent = fmtSize(inputFile.size);
+    newSizeEl.textContent = fmtSize(outputBlob.size);
+
+    progressWrap.classList.remove('show');
+    doneWrap.classList.add('show');
+  } catch (err) {
+    progressLabel.textContent = 'Error';
+    console.error(err);
+  }
+
+  goBtn.disabled = false;
+});
+
+downloadBtn.addEventListener('click', () => {
+  if (!outputUrl) return;
+  const a = document.createElement('a');
+  a.href = outputUrl;
+  a.download = 'compressed.mp4';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+});
+
+shareBtn.addEventListener('click', async () => {
+  if (!outputBlob) return;
+  const file = new File([outputBlob], 'compressed.mp4', { type: 'video/mp4' });
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); } catch(e) {}
+  } else {
+    downloadBtn.click();
+  }
+});
+
+againBtn.addEventListener('click', () => {
+  inputFile = null;
+  outputBlob = null;
+  if (outputUrl) URL.revokeObjectURL(outputUrl);
+  outputUrl = null;
+  panel.classList.remove('show');
+  dropZone.style.display = 'flex';
+  fileInput.value = '';
+});
+</script>
+
+</body>
+</html>
